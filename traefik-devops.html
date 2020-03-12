@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+<title>利用Traefik搭建超简单的DevOps平台 - 宁静方能致远</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+
+
+    <meta name="description" content="又是好久没有写博客了，忽然有点自己不知道继续往哪个方向发展，一会搞搞Flutter，一会又玩玩Docker，有时又想做些框架沉淀，很多东西都没深入做下去。正好之前搞的DevOps平台最近需要做些扩展，就花点时间把这次经验记录下来方便以后查看😂。 ¶首先，做什么？为什么做？ 还是DevOps，还是为了简化开发，还是低端机器，所以选择的方案依然是Gogs+drone。但是这次的方案有别于之前的Dok">
+<meta name="keywords" content="gogs,drone,traefik,devops,registry">
+<meta property="og:type" content="article">
+<meta property="og:title" content="利用Traefik搭建超简单的DevOps平台">
+<meta property="og:url" content="https://blog.erguotou.me/traefik-devops.html">
+<meta property="og:site_name" content="宁静方能致远">
+<meta property="og:description" content="又是好久没有写博客了，忽然有点自己不知道继续往哪个方向发展，一会搞搞Flutter，一会又玩玩Docker，有时又想做些框架沉淀，很多东西都没深入做下去。正好之前搞的DevOps平台最近需要做些扩展，就花点时间把这次经验记录下来方便以后查看😂。 ¶首先，做什么？为什么做？ 还是DevOps，还是为了简化开发，还是低端机器，所以选择的方案依然是Gogs+drone。但是这次的方案有别于之前的Dok">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://traefik.tech/docs/assets/img/traefik-concepts-1.png">
+<meta property="og:image" content="https://blog.erguotou.me/images/devops/traefik-only-whoami.png">
+<meta property="og:image" content="https://blog.erguotou.me/images/devops/whoami.png">
+<meta property="og:image" content="https://blog.erguotou.me/images/devops/traefik-devops1.png">
+<meta property="og:image" content="https://blog.erguotou.me/images/devops/traefik-drone-devops.png">
+<meta property="og:image" content="https://blog.erguotou.me/images/devops/traefik-devops-final.png">
+<meta property="og:updated_time" content="2020-03-12T09:49:09.136Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="利用Traefik搭建超简单的DevOps平台">
+<meta name="twitter:description" content="又是好久没有写博客了，忽然有点自己不知道继续往哪个方向发展，一会搞搞Flutter，一会又玩玩Docker，有时又想做些框架沉淀，很多东西都没深入做下去。正好之前搞的DevOps平台最近需要做些扩展，就花点时间把这次经验记录下来方便以后查看😂。 ¶首先，做什么？为什么做？ 还是DevOps，还是为了简化开发，还是低端机器，所以选择的方案依然是Gogs+drone。但是这次的方案有别于之前的Dok">
+<meta name="twitter:image" content="https://traefik.tech/docs/assets/img/traefik-concepts-1.png">
+
+
+
+
+
+<link rel="icon" href="/images/favicon.png">
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.7.2/css/bulma.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css">
+<link rel="stylesheet" href="https://fonts.proxy.ustclug.org/css?family=Ubuntu:400,600|Source+Code+Pro">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-dark.css">
+
+
+    
+    
+    
+    <style>body>.footer,body>.navbar,body>.section{opacity:0}</style>
+    
+
+    
+    
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css">
+    
+
+    
+    
+    
+    
+    
+    
+
+<link rel="stylesheet" href="/css/back-to-top.css">
+
+
+    
+    
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-81237576-1"></script>
+<script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-81237576-1');
+</script>
+
+
+    
+    
+    
+    
+
+    
+    
+<link rel="stylesheet" href="/css/progressbar.css">
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+    
+    
+    
+
+    
+    
+    
+
+
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="is-3-column">
+    <nav class="navbar navbar-main">
+    <div class="container">
+        <div class="navbar-brand is-flex-center">
+            <a class="navbar-item navbar-logo" href="/">
+            
+                <img src="/images/logo.svg" alt="利用Traefik搭建超简单的DevOps平台" height="28">
+            
+            </a>
+        </div>
+        <div class="navbar-menu">
+            
+            <div class="navbar-start">
+                
+                <a class="navbar-item" href="/">主页</a>
+                
+                <a class="navbar-item" href="/archives">文章</a>
+                
+                <a class="navbar-item" href="/tags">标签</a>
+                
+            </div>
+            
+            <div class="navbar-end">
+                
+                
+                
+                <a class="navbar-item search" title="搜索" href="javascript:;">
+                    <i class="fas fa-search"></i>
+                </a>
+                
+            </div>
+        </div>
+    </div>
+</nav>
+    
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-8-tablet is-8-desktop is-6-widescreen has-order-2 column-main"><div class="card">
+    
+    <div class="card-image">
+        <span class="image is-7by1">
+            <img class="thumbnail" src="/images/devops/traefik-devops.jpg" alt="利用Traefik搭建超简单的DevOps平台">
+        </span>
+    </div>
+    
+    <div class="card-content article ">
+        
+        <div class="level article-meta is-size-7 is-uppercase is-mobile is-overflow-x-auto">
+            <div class="level-left">
+                <span class="level-item has-text-grey">
+                  <time datetime="2020-02-16T14:38:00.000Z">2020-02-16</time>
+                  
+                  &nbsp;(&nbsp;更新于<time datetime="2020-03-12T09:49:09.136Z">2020-03-12</time>&nbsp;)&nbsp;
+                  
+                </span>
+                
+                
+                <span class="level-item has-text-grey">
+                    
+                    
+                    26 分钟 读完 (大约 3884 个字)
+                </span>
+                
+                
+            </div>
+        </div>
+        
+        <h1 class="title is-size-3 is-size-4-mobile has-text-weight-normal">
+            
+                利用Traefik搭建超简单的DevOps平台
+            
+        </h1>
+        <div class="content">
+            <p>又是好久没有写博客了，忽然有点自己不知道继续往哪个方向发展，一会搞搞Flutter，一会又玩玩Docker，有时又想做些框架沉淀，很多东西都没深入做下去。正好之前搞的DevOps平台最近需要做些扩展，就花点时间把这次经验记录下来方便以后查看😂。</p>
+<h2 id="首先，做什么？为什么做？"><a class="header-anchor" href="#首先，做什么？为什么做？">¶</a>首先，做什么？为什么做？</h2>
+<p>还是DevOps，还是为了简化开发，还是低端机器，所以选择的方案依然是Gogs+drone。但是这次的方案有别于之前的Dokku，而是使用<code>traefik</code>作为网关服务器并且提供自动设置HTTPS的功能。先看下什么是<code>traefik</code>：</p>
+<a id="more"></a>
+<blockquote>
+<p>Traefik 是一个边缘路由器，这意味着它是您平台的大门，它拦截并路由每个传入的请求:<br>
+<img src="https://traefik.tech/docs/assets/img/traefik-concepts-1.png" alt="Traefik示意图"></p>
+<p>它管理所有逻辑和每个规则确定哪些服务处理哪些请求（基于路径，主机，headers，等等…）。</p>
+</blockquote>
+<p><code>traefik</code>支持服务自动发现，当我们在Docker上使用<code>traefik</code>时，只需给Docker容器指定Label，就可以让<code>traefik</code>自动发现它们，自动完成端口映射、域名绑定、HTTPS证书管理等🤔。</p>
+<p>所以基于<code>traefik</code>的部署方案可以让我们省去很多配置工作（比如Nginx的配置，Let’s Encrypt的证书申请和更新，负载均衡等），当然也留给了我们很多坑…😟</p>
+<h2 id="其次，准备阶段"><a class="header-anchor" href="#其次，准备阶段">¶</a>其次，准备阶段</h2>
+<p>一个1核2G2M的云服务器，ssh登录上，安装docker，安装docker-compose，这些官网都有教程，很简单，掠过。</p>
+<p>然后我们先提前做好域名映射，如果你使<code>用traefik</code>的<code>dnsChallenge</code>方式可以跳过，<code>traefik</code>会利用api自动为你做好域名映射（应该是吧，反正我没用过，我更喜欢自己把控🤔）：</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">traefik.erguotou.me -&gt; ip</span><br><span class="line">whoami.erguotou.me -&gt; ip</span><br><span class="line">gogs.erguotou.me -&gt; ip</span><br><span class="line">drone.erguotou.me -&gt; ip</span><br><span class="line">registry.erguotou.me -&gt; ip</span><br><span class="line">registry-ui.erguotou.me -&gt; ip</span><br></pre></td></tr></table></figure>
+<p>然后我们新建<code>.env</code>文件，并填入下面内容</p>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"># 顶级域名，此处替换成自己的</span><br><span class="line">SERVER_DOMAIN=erguotou.me</span><br><span class="line"></span><br><span class="line"># Time Zone</span><br><span class="line">TIME_ZONE=Asia/Shanghai</span><br><span class="line"></span><br><span class="line"># ACME，此处替换成自己的</span><br><span class="line">ACME_EMAIL=xxx</span><br><span class="line"></span><br><span class="line"># Drone，此处替换成自己的</span><br><span class="line">DRONE_SECRET=xxx</span><br><span class="line">DRONE_ADMIN=xxx</span><br><span class="line"></span><br><span class="line"># basicauth用户密码</span><br><span class="line"># 使用 echo $(htpasswd -nb user password) 生成用户密钥</span><br><span class="line"># 如果直接在yml中使用需要改为 echo $(htpasswd -nb user password) | sed -e s/\\$/\\$\\$/g</span><br><span class="line">TRAEFIK_AUTH_USER=xxx</span><br><span class="line">REGISTRY_AUTH_USER=xxx</span><br><span class="line">REGISTRY_UI_AUTH_USER=xxx</span><br></pre></td></tr></table></figure>
+<p>接着新建一个<code>docker-compose.yml</code>文件，并填入下面内容</p>
+<figure class="highlight yaml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-comment"># 目前最新版本，可以支持更多特性，虽然我可能也没用上啥特性</span></span><br><span class="line"><span class="hljs-attr">version:</span> <span class="hljs-string">"3.7"</span></span><br><span class="line"><span class="hljs-attr">services:</span></span><br><span class="line">  <span class="hljs-attr">traefik:</span></span><br><span class="line">    <span class="hljs-comment"># The official docker image</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">traefik:latest</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-comment"># Enables the web UI and tells Traefik to listen to docker</span></span><br><span class="line">    <span class="hljs-attr">command:</span></span><br><span class="line">      <span class="hljs-comment"># 提供web查看页面</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--api.insecure=true"</span></span><br><span class="line">      <span class="hljs-comment"># 使用docker provider</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--providers.docker=true"</span></span><br><span class="line">      <span class="hljs-comment"># 取消暴露所有的容器，由我们自己把控</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--providers.docker.exposedbydefault=false"</span></span><br><span class="line">      <span class="hljs-comment"># 定义websecure</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--entryPoints.websecure.address=:443"</span></span><br><span class="line">      <span class="hljs-comment"># 使用tlschallenge方式进行https证书管理，当前也可以使用httpChallenge或者dnsChallenge</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"</span></span><br><span class="line">      <span class="hljs-comment"># - "--certificatesResolvers.mytlschallenge.acme.httpchallenge.entryPoint=web"</span></span><br><span class="line">      <span class="hljs-comment"># 指定Let's Encrypt证书获取所使用的邮箱地址</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesResolvers.mytlschallenge.acme.email=$&#123;ACME_EMAIL&#125;"</span></span><br><span class="line">      <span class="hljs-comment"># acme.json文件存储位置（容器内），方便后续暴露出来</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesResolvers.mytlschallenge.acme.storage=/etc/acme/acme.json"</span></span><br><span class="line">    <span class="hljs-attr">ports:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"443:443"</span></span><br><span class="line">      <span class="hljs-comment"># The Web UI (enabled by --api.insecure=true)</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"8080:8080"</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"./acme:/etc/acme"</span></span><br><span class="line">      <span class="hljs-comment"># So that Traefik can listen to the Docker events</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"/var/run/docker.sock:/var/run/docker.sock:ro"</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line"></span><br><span class="line">  <span class="hljs-comment"># 先启用一个官方示例的容器</span></span><br><span class="line">  <span class="hljs-attr">whoami:</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">containous/whoami</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">simple-service</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-comment"># 告诉traefik映射80端口</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.whoami.loadbalancer.server.port=80"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.whoami.rule=Host(`whoami.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-comment"># 告诉traefik入口方式使用https</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.whoami.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.whoami.tls.certresolver=mytlschallenge"</span></span><br></pre></td></tr></table></figure>
+<p>最后运行<code>docker-compose up</code>运行，我们看到<code>http://traefik.erguotou.me:8080/dashboard/</code>和<code>https://whoami.erguotou.me/</code>都可以正常访问，并且在traefik的Dashboard里可以看到成功纳管了一个Router。<br>
+<img src="/images/devops/traefik-only-whoami.png" alt="traefik面板"><br>
+<img src="/images/devops/whoami.png" alt="whoami启动完成"></p>
+<h2 id="再次，尝试与填坑"><a class="header-anchor" href="#再次，尝试与填坑">¶</a>再次，尝试与填坑</h2>
+<p>初步测试成功后我们开始搭建我们的DevOps平台，我们在原来的<code>docker-compose.yml</code>文件中追加以下内容</p>
+<figure class="highlight yml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">version:</span> <span class="hljs-string">"3.7"</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">services:</span></span><br><span class="line">  <span class="hljs-comment"># ...原来的内容，下面是新增的</span></span><br><span class="line">  <span class="hljs-comment"># gogs</span></span><br><span class="line">  <span class="hljs-attr">gogs:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">gogs</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">gogs/gogs</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">gogs</span></span><br><span class="line">    <span class="hljs-attr">ports:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"10022:22"</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./devops/gogs:/data</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.gogs.loadbalancer.server.port=3000"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.rule=Host(`gogs.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.tls.certresolver=mytlschallenge"</span></span><br><span class="line">  <span class="hljs-comment"># drone 服务端</span></span><br><span class="line">  <span class="hljs-attr">drone-server:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">drone/drone</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./devops/drone-server:/var/lib/drone/</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_GOGS_SERVER=https://gogs.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_SECRET=$&#123;DRONE_SECRET&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_HOST=drone.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_PROTO=https</span></span><br><span class="line">      <span class="hljs-comment"># 设置管理员</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_USER_CREATE=username:$&#123;DRONE_ADMIN&#125;,admin:true</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.rule=Host(`drone.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.tls.certresolver=mytlschallenge"</span></span><br><span class="line">  <span class="hljs-comment"># drone agent</span></span><br><span class="line">  <span class="hljs-attr">drone-agent:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">drone-agent</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">drone/agent</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">drone-agent</span></span><br><span class="line">    <span class="hljs-attr">depends_on:</span></span><br><span class="line">      <span class="hljs-comment"># 让server先起</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-comment"># deploy:</span></span><br><span class="line">      <span class="hljs-comment"># mode: replicated</span></span><br><span class="line">      <span class="hljs-comment"># replicas: 6</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">/var/run/docker.sock:/var/run/docker.sock</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_HOST=drone.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_SECRET=$&#123;DRONE_SECRET&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_PROTO=https</span></span><br><span class="line">      <span class="hljs-comment"># 一台机器最多同时跑2个任务</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RUNNER_CAPACITY=2</span></span><br><span class="line">      <span class="hljs-comment"># - DRONE_RUNNER_NAME=$&#123;HOSTNAME&#125;</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-comment"># agent不需要对外暴露</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=false"</span></span><br><span class="line">  <span class="hljs-comment"># docker registry</span></span><br><span class="line">  <span class="hljs-attr">registry:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./devops/registry:/var/lib/registry</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">REGISTRY_STORAGE_DELETE_ENABLED=true</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.rule=Host(`registry.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.tls.certresolver=mytlschallenge"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.middlewares=registry-auth@docker"</span></span><br><span class="line">       <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-auth.basicauth.users=$&#123;REGISTRY_AUTH_USER&#125;"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-auth.basicauth.removeheader=true"</span></span><br><span class="line">  <span class="hljs-comment"># docker registry 可视化web页面</span></span><br><span class="line">  <span class="hljs-attr">registry-ui:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">registry-ui</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">quiq/docker-registry-ui</span></span><br><span class="line">    <span class="hljs-comment">#image: jc21/registry-ui</span></span><br><span class="line">    <span class="hljs-comment">#image: konradkleine/docker-registry-frontend:v2</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">registry-ui</span></span><br><span class="line">    <span class="hljs-attr">depends_on:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">    <span class="hljs-comment"># 此处有个大坑，对于Dockerfile中没有暴露端口的，需要自己手动指定下暴露的端口，这样traefik才能检测到要映射哪个端口，否则不成功</span></span><br><span class="line">    <span class="hljs-attr">expose:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-number">8000</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./devops/registry-ui.yml:/opt/config.yml:ro</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-comment"># 添加一个basic auth</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-ui-auth.basicauth.users=$&#123;REGISTRY_UI_AUTH_USER&#125;"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-ui-auth.basicauth.removeheader=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.registry-ui.loadbalancer.server.port=8000"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.rule=Host(`registry-ui.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.tls.certresolver=mytlschallenge"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.middlewares=registry-ui-auth@docker"</span></span><br></pre></td></tr></table></figure>
+<p>对于<code>registry-ui</code>镜像的选择，原来用的是<code>konradkleine/docker-registry-frontend:v2</code>，后来也试过<code>jc21/registry-ui</code>，但是容器体积都比较大，最后换了go语言的<code>quiq/docker-registry-ui</code>（每种镜像的配置稍有差异）要知道在小内存服务器上，Golang一条线才是正道😂。</p>
+<p>除此之外我们给<code>registry</code>和<code>registry-ui</code>加了一个<code>traefik</code>提供的<code>baisicauth</code>中间件，帮助我们添加一层安全认证，只有指定的用户可以查看，方便👍！同时配置中提到的<code>registry-ui.yml</code>文件的内容如下（去掉了很多注释，具体可以看容器的文档说明）：</p>
+<figure class="highlight yaml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">listen_addr:</span> <span class="hljs-number">0.0</span><span class="hljs-number">.0</span><span class="hljs-number">.0</span><span class="hljs-string">:8000</span></span><br><span class="line"><span class="hljs-attr">base_path:</span> <span class="hljs-string">/</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">registry_url:</span> <span class="hljs-string">https://registry.erguotou.me</span></span><br><span class="line"><span class="hljs-attr">verify_tls:</span> <span class="hljs-literal">true</span></span><br><span class="line"><span class="hljs-comment"># 更换成自己的</span></span><br><span class="line"><span class="hljs-attr">registry_username:</span> <span class="hljs-string">user</span></span><br><span class="line"><span class="hljs-attr">registry_password:</span> <span class="hljs-string">pass</span></span><br><span class="line"><span class="hljs-attr">event_database_driver:</span> <span class="hljs-string">sqlite3</span></span><br><span class="line"><span class="hljs-attr">event_database_location:</span> <span class="hljs-string">data/registry_events.db</span></span><br><span class="line"><span class="hljs-attr">event_deletion_enabled:</span> <span class="hljs-literal">False</span></span><br><span class="line"><span class="hljs-attr">cache_refresh_interval:</span> <span class="hljs-number">10</span></span><br><span class="line"><span class="hljs-attr">anyone_can_delete:</span> <span class="hljs-literal">false</span></span><br><span class="line"><span class="hljs-attr">admins:</span> <span class="hljs-string">[]</span></span><br><span class="line"><span class="hljs-attr">debug:</span> <span class="hljs-literal">false</span></span><br><span class="line"><span class="hljs-attr">purge_tags_keep_days:</span> <span class="hljs-number">90</span></span><br><span class="line"><span class="hljs-attr">purge_tags_keep_count:</span> <span class="hljs-number">2</span></span><br><span class="line"><span class="hljs-attr">purge_tags_schedule:</span> <span class="hljs-string">''</span></span><br></pre></td></tr></table></figure>
+<p>我们开始启动服务<code>docker-compose up</code>，然后打开<code>gogs.erguotou.me</code>开始配置gogs，同时<code>drone</code>,<code>registry</code>,<code>registry-ui</code>服务也都起好了。<br>
+<img src="/images/devops/traefik-devops1.png" alt="初步启动完成"><br>
+等等，不是说好多坑么？Emmmmm~ 我这都是坑填完了得出的配置，<code>traefik</code>文档也不知道看了多少次，配置试了多少次。😅</p>
+<p>一切看起来那么的美好😏</p>
+<h2 id="接着，深入与实践"><a class="header-anchor" href="#接着，深入与实践">¶</a>接着，深入与实践</h2>
+<p>虽然服务都启动了，但还有些可以优化的点，并且我们还要验证下整个DevOps流程是否可以跑通，尤其是drone的agent我们还没有验证呢。在这之前我们先将配置文件分离下，按功能将<code>docker-compose.yml</code>中的service分开到多个文件中分别启动。</p>
+<h3 id="服务拆分"><a class="header-anchor" href="#服务拆分">¶</a>服务拆分</h3>
+<ol>
+<li>
+<p>删除初始版本中的<code>whoami</code>服务</p>
+</li>
+<li>
+<p>在<code>devops</code>目录新增<code>docker-compose.yml</code>文件，将后续添加的services剪切到yml文件中（yml文件中services和version根节点也要复制）</p>
+</li>
+<li>
+<p>修改<code>devops/docker-compose.yml</code>中<code>volumns</code>中映射路径</p>
+</li>
+<li>
+<p>分别启动<code>docker-compose up -d</code>和<code>docker-compose -f ./devops/docker-compose.yml up -d</code></p>
+</li>
+</ol>
+<p>这里关于<code>.env</code>文件我做了一些测试，发现在<code>traefik</code>同级创建的<code>.env</code>文件在<code>devops</code>目录中不做任何操作可以直接访问到里面的环境变量，之前还一直以为需要手动指定呢。</p>
+<p><s>另外上面的环境变量其实是不对了，原来的<code>.env</code>文件是当前目录下的，但是现在目录结构变了，所以那些环境变量就取不到了。<br>
+其实<a href="https://stackoverflow.com/questions/36283908/re-using-environmental-variables-in-docker-compose-yml">有很多方法可以实现环境变量共享</a>，本来打算用<code>extends env_file</code>实现的，结果compose 3版本后不支持了，那就采用每个service指定<code>env_file</code>的方案吧（虽然有点麻烦），修改完重新启动。</s></p>
+<p>访问不了？先看下<code>traefik</code>的路由表，发现有接入，但就是访问不了。无意间在查看<code>registry-ui</code>的启动日志时发现错误，说<code>registry.erguotou.me</code>访问不了。这是为什么呢？又是一番搜索排查尝试，最终发现当<code>devops services</code>和<code>traefik service</code>不在同一个文件时，我们需要让它们加入同一个网络，这样子<code>traefik</code>才可以完成自动代理。于是我们开始给<code>traefik</code>服务关联网络，给<code>devops</code>里的各种服务也绑定同样的网络。同时需要添加新的label<code>traefik.docker.network=traefik_webgateway</code>。改完重启，一切OK（最终配置可查看下文）。</p>
+<h3 id="给Traefik增加安全性"><a class="header-anchor" href="#给Traefik增加安全性">¶</a>给Traefik增加安全性</h3>
+<p>现在我们的<code>traefik</code>开启了8080的Dashboard，意味着别人也能看到我们的内容，所以在生产环境下我们需要关闭<code>traefik</code>的<code>api</code>服务，或者至少我们需要给<code>api</code>加一层认证。</p>
+<p>关闭的话直接在<code>traefik</code>的<code>service</code>中把<code>--api.insecure=true</code>改为<code>--api=false</code>即可。</p>
+<p>如果想看Dashboard又想安全性可以用上面说到的<code>basic auth</code>套一层，</p>
+<h3 id="验证DevOps流程"><a class="header-anchor" href="#验证DevOps流程">¶</a>验证DevOps流程</h3>
+<p>这里我们以一个简单的vue项目做测试看下如何实现<code>devops</code>自动化。</p>
+<ol>
+<li>
+<p>在gogs上新建一个临时项目<code>/tmp/vue-demo</code></p>
+</li>
+<li>
+<p>在本地使用<code>Vue cli</code>创建一个demo项目，并上传到git服务。此时不会触发任何后续操作</p>
+</li>
+<li>
+<p>添加<code>.drone.yml</code>，推送到仓库，yml文件内容大致如下</p>
+</li>
+</ol>
+  <figure class="highlight yml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">---</span></span><br><span class="line"><span class="hljs-attr">kind:</span> <span class="hljs-string">pipeline</span></span><br><span class="line"><span class="hljs-attr">name:</span> <span class="hljs-string">default</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">trigger:</span></span><br><span class="line">  <span class="hljs-attr">event:</span></span><br><span class="line">    <span class="hljs-bullet">-</span> <span class="hljs-string">tag</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">steps:</span></span><br><span class="line">  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">build</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">plugins/docker</span></span><br><span class="line">    <span class="hljs-attr">settings:</span></span><br><span class="line">      <span class="hljs-attr">dockerfile:</span> <span class="hljs-string">docker/Dockerfile</span></span><br><span class="line">      <span class="hljs-attr">registry:</span> <span class="hljs-string">registry.erguotou.me</span></span><br><span class="line">      <span class="hljs-attr">repo:</span> <span class="hljs-string">registry.erguotou.me/tmp/vue-demo</span></span><br><span class="line">      <span class="hljs-attr">username:</span></span><br><span class="line">        <span class="hljs-attr">from_secret:</span> <span class="hljs-string">REGISTRY_USER</span></span><br><span class="line">      <span class="hljs-attr">password:</span></span><br><span class="line">        <span class="hljs-attr">from_secret:</span> <span class="hljs-string">REGISTRY_PASSWORD</span></span><br><span class="line">      <span class="hljs-attr">tags:</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">latest</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">$&#123;DRONE_TAG&#125;</span></span><br><span class="line">      <span class="hljs-attr">auto_tag:</span> <span class="hljs-literal">true</span></span><br><span class="line">      <span class="hljs-attr">force_tag:</span> <span class="hljs-literal">true</span></span><br><span class="line">  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">deploy</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">appleboy/drone-ssh</span></span><br><span class="line">    <span class="hljs-attr">settings:</span></span><br><span class="line">      <span class="hljs-attr">host:</span> <span class="hljs-string">vue-demo.erguotou.me</span></span><br><span class="line">      <span class="hljs-attr">username:</span></span><br><span class="line">        <span class="hljs-attr">from_secret:</span> <span class="hljs-string">SSH_USER</span></span><br><span class="line">      <span class="hljs-attr">ssh_key:</span></span><br><span class="line">        <span class="hljs-attr">from_secret:</span> <span class="hljs-string">SSH_KEY</span></span><br><span class="line">      <span class="hljs-attr">script:</span></span><br><span class="line">        <span class="hljs-comment"># 在机器上执行一次login操作，以后就不用了</span></span><br><span class="line">        <span class="hljs-comment"># - docker login registry.erguotou.me --username $&#123;REGISTRY_USER&#125; --password $&#123;REGISTRY_PASSWORD&#125;</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">docker</span> <span class="hljs-string">pull</span> <span class="hljs-string">registry.erguotou.me/tmp/vue-demo:$&#123;DRONE_TAG&#125;</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">docker-compose</span> <span class="hljs-string">-f</span> <span class="hljs-string">apps/vue-demo/docker-compose.yml</span> <span class="hljs-string">stop</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">docker-compose</span> <span class="hljs-string">-f</span> <span class="hljs-string">apps/vue-demo/docker-compose.yml</span> <span class="hljs-string">rm</span> <span class="hljs-string">-f</span></span><br><span class="line">        <span class="hljs-bullet">-</span> <span class="hljs-string">docker-compose</span> <span class="hljs-string">-f</span> <span class="hljs-string">apps/vue-demo/docker-compose.yml</span> <span class="hljs-string">up</span> <span class="hljs-string">-d</span></span><br><span class="line">  <span class="hljs-bullet">-</span> <span class="hljs-attr">name:</span> <span class="hljs-string">send-wechat</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">yakumioto/drone-serverchan</span></span><br><span class="line">    <span class="hljs-attr">settings:</span></span><br><span class="line">      <span class="hljs-attr">key:</span></span><br><span class="line">        <span class="hljs-attr">from_secret:</span> <span class="hljs-string">SERVERCHAN_KEY</span></span><br><span class="line">      <span class="hljs-attr">text:</span> <span class="hljs-string">"部署结果"</span></span><br><span class="line">      <span class="hljs-comment"># 目前该插件支持能力稍微不足，后期可以考虑自己开发下</span></span><br><span class="line">      <span class="hljs-attr">desp:</span> <span class="hljs-string">"部署完成，[点击前往查看](https://vue-demo.erguotou.me)"</span></span><br></pre></td></tr></table></figure>
+<ol start="4">
+<li>查看drone上的构建结果，查看registry是否推送成功，查看项目是否部署成功<br>
+，最后结果可以成功，<a href="https://vue-demo.erguotou.me">点击地址查看</a>。<br>
+<img src="/images/devops/traefik-drone-devops.png" alt="DevOps流程全部走完"></li>
+</ol>
+<h3 id="最终配置"><a class="header-anchor" href="#最终配置">¶</a>最终配置</h3>
+<p>最终<code>docker-compose.yml</code>文件内容如下：</p>
+<figure class="highlight yml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">version:</span> <span class="hljs-string">"3.7"</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">services:</span></span><br><span class="line">  <span class="hljs-attr">traefik:</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">traefik:latest</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">command:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--api=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--api.dashboard=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--providers.docker=true"</span></span><br><span class="line">      <span class="hljs-comment"># 默认加入此网络，也许关联networks之后可以不设置？反正不关联networks其它的都映射不成功</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--providers.docker.network=traefik_webgateway"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--providers.docker.exposedbydefault=false"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--entryPoints.websecure.address=:443"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesResolvers.mytlschallenge.acme.email=$&#123;ACME_EMAIL&#125;"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"--certificatesResolvers.mytlschallenge.acme.storage=/etc/acme/acme.json"</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.api.rule=Host(`traefik.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.api.service=api@internal"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.api.loadbalancer.server.port=8080"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.api.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.api.tls.certresolver=mytlschallenge"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.api.middlewares=auth"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.auth.basicauth.users=$&#123;TRAEFIK_AUTH_USER&#125;"</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik_webgateway</span></span><br><span class="line">    <span class="hljs-attr">ports:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"443:443"</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"./acme:/etc/acme"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"/var/run/docker.sock:/var/run/docker.sock:ro"</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line"><span class="hljs-attr">networks:</span></span><br><span class="line">  <span class="hljs-attr">traefik_webgateway:</span></span><br><span class="line">    <span class="hljs-attr">name:</span> <span class="hljs-string">traefik_webgateway</span></span><br><span class="line">    <span class="hljs-attr">driver:</span> <span class="hljs-string">bridge</span></span><br></pre></td></tr></table></figure>
+<p><code>devops/docker-compose.yml</code>文件内容如下：</p>
+<figure class="highlight yml hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-attr">version:</span> <span class="hljs-string">"3.7"</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">services:</span></span><br><span class="line">  <span class="hljs-comment"># gogs</span></span><br><span class="line">  <span class="hljs-attr">gogs:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">gogs</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">gogs/gogs</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">gogs</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">ports:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"10022:22"</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./gogs:/data</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.gogs.loadbalancer.server.port=3000"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.rule=Host(`gogs.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.gogs.tls.certresolver=mytlschallenge"</span></span><br><span class="line">  <span class="hljs-comment"># drone 服务端</span></span><br><span class="line">  <span class="hljs-attr">drone-server:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">drone/drone</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./drone-server:/var/lib/drone/</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_GOGS_SERVER=https://gogs.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_SECRET=$&#123;DRONE_SECRET&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_HOST=drone.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_PROTO=https</span></span><br><span class="line">      <span class="hljs-comment"># 设置管理员</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_USER_CREATE=username:$&#123;DRONE_ADMIN&#125;,admin:true</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.rule=Host(`drone.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.drone-server.tls.certresolver=mytlschallenge"</span></span><br><span class="line">  <span class="hljs-comment"># drone agent</span></span><br><span class="line">  <span class="hljs-attr">drone-agent:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">drone-agent</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">drone/agent</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">drone-agent</span></span><br><span class="line">    <span class="hljs-attr">depends_on:</span></span><br><span class="line">      <span class="hljs-comment"># 让server先起</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">drone-server</span></span><br><span class="line">    <span class="hljs-comment"># deploy:</span></span><br><span class="line">      <span class="hljs-comment"># mode: replicated</span></span><br><span class="line">      <span class="hljs-comment"># replicas: 6</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">/var/run/docker.sock:/var/run/docker.sock</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_HOST=drone.$&#123;SERVER_DOMAIN&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RPC_SECRET=$&#123;DRONE_SECRET&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_SERVER_PROTO=https</span></span><br><span class="line">      <span class="hljs-comment"># 一台机器最多同时跑2个任务</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">DRONE_RUNNER_CAPACITY=2</span></span><br><span class="line">      <span class="hljs-comment"># - DRONE_RUNNER_NAME=$&#123;HOSTNAME&#125;</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-comment"># agent不需要对外暴露</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=false"</span></span><br><span class="line">  <span class="hljs-comment"># docker registry</span></span><br><span class="line">  <span class="hljs-attr">registry:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./registry:/var/lib/registry</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">REGISTRY_STORAGE_DELETE_ENABLED=true</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.rule=Host(`registry.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.tls.certresolver=mytlschallenge"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry.middlewares=registry-auth@docker"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-auth.basicauth.users=$&#123;REGISTRY_AUTH_USER&#125;"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-auth.basicauth.removeheader=true"</span></span><br><span class="line">  <span class="hljs-comment"># docker registry 可视化web页面</span></span><br><span class="line">  <span class="hljs-attr">registry-ui:</span></span><br><span class="line">    <span class="hljs-attr">container_name:</span> <span class="hljs-string">registry-ui</span></span><br><span class="line">    <span class="hljs-attr">image:</span> <span class="hljs-string">quiq/docker-registry-ui</span></span><br><span class="line">    <span class="hljs-attr">restart:</span> <span class="hljs-string">always</span></span><br><span class="line">    <span class="hljs-attr">hostname:</span> <span class="hljs-string">registry-ui</span></span><br><span class="line">    <span class="hljs-attr">networks:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">traefik</span></span><br><span class="line">    <span class="hljs-attr">depends_on:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">registry</span></span><br><span class="line">    <span class="hljs-attr">environment:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">TZ=$&#123;TIME_ZONE&#125;</span></span><br><span class="line">    <span class="hljs-comment"># 此处有个大坑，对于Dockerfile中没有暴露端口的，需要自己手动指定下暴露的端口，这样traefik才能检测到要映射哪个端口，否则不成功</span></span><br><span class="line">    <span class="hljs-attr">expose:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-number">8000</span></span><br><span class="line">    <span class="hljs-attr">volumes:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">./registry-ui.yml:/opt/config.yml:ro</span></span><br><span class="line">    <span class="hljs-attr">labels:</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.enable=true"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.services.registry-ui.loadbalancer.server.port=8000"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.rule=Host(`registry-ui.$&#123;SERVER_DOMAIN&#125;`)"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.entrypoints=websecure"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.tls.certresolver=mytlschallenge"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.routers.registry-ui.middlewares=registry-ui-auth@docker"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-ui-auth.basicauth.users=$&#123;REGISTRY_UI_AUTH_USER&#125;"</span></span><br><span class="line">      <span class="hljs-bullet">-</span> <span class="hljs-string">"traefik.http.middlewares.registry-ui-auth.basicauth.removeheader=true"</span></span><br><span class="line"></span><br><span class="line"><span class="hljs-attr">networks:</span></span><br><span class="line">  <span class="hljs-attr">traefik:</span></span><br><span class="line">    <span class="hljs-attr">external:</span></span><br><span class="line">      <span class="hljs-attr">name:</span> <span class="hljs-string">traefik_webgateway</span></span><br></pre></td></tr></table></figure>
+<p><code>traefik</code>的Dashboard效果如下：<br>
+<img src="/images/devops/traefik-devops-final.png" alt="Traefik Dashboard"></p>
+<h2 id="最后，总结"><a class="header-anchor" href="#最后，总结">¶</a>最后，总结</h2>
+<p>通过这么多天的不断学习和尝试，基本上填完了<code>traefik</code>作为网关路由器的坑，也让我学习了<code>traefik</code>的各种配置，最终组建了自己的<code>DevOps</code>平台。最终流程走通后心情非常舒畅，感觉完成了天大的事😂。</p>
+<p>我们可以浅尝辄止，也可以深坑直入。这是自己的选择，也许也决定了自己的高度。</p>
+<p>分享此文，给可能需要的人。</p>
+
+        </div>
+        
+        <div class="level is-size-7 is-uppercase">
+            <div class="level-start">
+                <div class="level-item">
+                    <span class="is-size-6 has-text-grey has-mr-7">#</span>
+                    <a class="has-link-grey -link" href="/tags/devops/">devops</a>, <a class="has-link-grey -link" href="/tags/drone/">drone</a>, <a class="has-link-grey -link" href="/tags/gogs/">gogs</a>, <a class="has-link-grey -link" href="/tags/registry/">registry</a>, <a class="has-link-grey -link" href="/tags/traefik/">traefik</a>
+                </div>
+            </div>
+        </div>
+        
+        
+        
+        <div class="social-share"></div>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js@1.0.16/dist/css/share.min.css">
+<script src="https://cdn.jsdelivr.net/npm/social-share.js@1.0.16/dist/js/social-share.min.js"></script>
+        
+    </div>
+</div>
+
+
+
+
+
+<div class="card card-transparent">
+    <div class="level post-navigation is-flex-wrap is-mobile">
+        
+        <div class="level-start">
+            <a class="level level-item has-link-grey  article-nav-prev" href="/wechat-mina-note.html">
+                <i class="level-item fas fa-chevron-left"></i>
+                <span class="level-item">微信小程序开发填坑整理</span>
+            </a>
+        </div>
+        
+        
+        <div class="level-end">
+            <a class="level level-item has-link-grey  article-nav-next" href="/centos7-update-openssh.html">
+                <span class="level-item">CentOS7升级OpenSSH</span>
+                <i class="level-item fas fa-chevron-right"></i>
+            </a>
+        </div>
+        
+    </div>
+</div>
+
+
+
+<div class="card">
+    <div class="card-content">
+        <h3 class="title is-5 has-text-weight-normal">评论</h3>
+        
+<div id="comment-container"></div>
+<link rel="stylesheet" href="https://imsun.github.io/gitment/style/default.css">
+<script src="https://imsun.github.io/gitment/dist/gitment.browser.js"></script>
+<script>
+	var gitment = new Gitment({
+		id: 'traefik-devops.html',
+		owner: 'erguotou520',
+		repo: 'HexoBlog',
+		oauth: {
+			client_id: '2796247645eb3e1a75a2',
+			client_secret: '0216a1a4c0ff0f5d8264f00582d697efe7ec2250',
+		},
+	})
+	gitment.render('comment-container')
+</script>
+
+    </div>
+</div>
+
+</div>
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen  has-order-1 column-left ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <nav class="level">
+            <div class="level-item has-text-centered">
+                <div>
+                    
+                        <img class="image is-128x128 has-mb-6" src="/images/avatar.jpg" alt="二锅头">
+                    
+                    
+                    <p class="is-size-4 is-block">
+                        二锅头
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-block">
+                        不正经的前端
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-flex is-flex-center has-text-grey">
+                        <i class="fas fa-map-marker-alt has-mr-7"></i>
+                        <span>China</span>
+                    </p>
+                    
+                </div>
+            </div>
+        </nav>
+        <nav class="level is-mobile">
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        文章
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        37
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        分类
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        0
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        标签
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        46
+                    </p>
+                </div>
+            </div>
+        </nav>
+        <div class="level">
+            <a class="level-item button is-link is-rounded" href="http://github.com/erguotou520">
+                关注我</a>
+        </div>
+        
+        
+        <div class="level is-mobile">
+            
+            <a class="level-item button is-white is-marginless" target="_blank" title="Github" href="http://github.com/erguotou520">
+                
+                <i class="fab fa-github"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank" title="RSS" href="/">
+                
+                <i class="fas fa-rss"></i>
+                
+            </a>
+            
+        </div>
+        
+    </div>
+</div>
+    
+    
+        <div class="column-right-shadow is-hidden-widescreen ">
+        
+            
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/wechat-mina-note.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/wechat/mina.png" alt="微信小程序开发填坑整理">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-21T13:52:00.000Z">2020-02-21</time></div>
+                    <a href="/wechat-mina-note.html" class="has-link-black-ter is-size-6">微信小程序开发填坑整理</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/traefik-devops.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/devops/traefik-devops.jpg" alt="利用Traefik搭建超简单的DevOps平台">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-16T14:38:00.000Z">2020-02-16</time></div>
+                    <a href="/traefik-devops.html" class="has-link-black-ter is-size-6">利用Traefik搭建超简单的DevOps平台</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/centos7-update-openssh.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/server/openssh.gif" alt="CentOS7升级OpenSSH">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-06-13T11:51:00.000Z">2019-06-13</time></div>
+                    <a href="/centos7-update-openssh.html" class="has-link-black-ter is-size-6">CentOS7升级OpenSSH</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/black-mac-os.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/others/mac-install.jpg" alt="黑苹果安装记录">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-05-14T23:10:00.000Z">2019-05-14</time></div>
+                    <a href="/black-mac-os.html" class="has-link-black-ter is-size-6">黑苹果安装记录</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/electron-app-summary.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/electron/logo.png" alt="Electron应用开发总结">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-02-26T10:30:00.000Z">2019-02-26</time></div>
+                    <a href="/electron-app-summary.html" class="has-link-black-ter is-size-6">Electron应用开发总结</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Api/">
+                        <span class="tag">Api</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Atom/">
+                        <span class="tag">Atom</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Atom-plugin/">
+                        <span class="tag">Atom-plugin</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CD/">
+                        <span class="tag">CD</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CI/">
+                        <span class="tag">CI</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Cookie/">
+                        <span class="tag">Cookie</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Debug/">
+                        <span class="tag">Debug</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Firebase/">
+                        <span class="tag">Firebase</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Fonts/">
+                        <span class="tag">Fonts</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Frontend/">
+                        <span class="tag">Frontend</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Ghost/">
+                        <span class="tag">Ghost</span>
+                        <span class="tag is-grey">10</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Git/">
+                        <span class="tag">Git</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Github/">
+                        <span class="tag">Github</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Hexo/">
+                        <span class="tag">Hexo</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Nginx/">
+                        <span class="tag">Nginx</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/NodeJs/">
+                        <span class="tag">NodeJs</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Raspberry/">
+                        <span class="tag">Raspberry</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/SSH/">
+                        <span class="tag">SSH</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Swiftype/">
+                        <span class="tag">Swiftype</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/TravisCI/">
+                        <span class="tag">TravisCI</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Vps/">
+                        <span class="tag">Vps</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/centos/">
+                        <span class="tag">centos</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ci/">
+                        <span class="tag">ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/devops/">
+                        <span class="tag">devops</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/dokku/">
+                        <span class="tag">dokku</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/drone/">
+                        <span class="tag">drone</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/electron/">
+                        <span class="tag">electron</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/electron-ssr/">
+                        <span class="tag">electron-ssr</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitlab-ci/">
+                        <span class="tag">gitlab ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gogs/">
+                        <span class="tag">gogs</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/k8s/">
+                        <span class="tag">k8s</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/kubernetes/">
+                        <span class="tag">kubernetes</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/mac/">
+                        <span class="tag">mac</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/openssh/">
+                        <span class="tag">openssh</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/os/">
+                        <span class="tag">os</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/rancher/">
+                        <span class="tag">rancher</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/rancher-os/">
+                        <span class="tag">rancher os</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/registry/">
+                        <span class="tag">registry</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/summary/">
+                        <span class="tag">summary</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/traefik/">
+                        <span class="tag">traefik</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/travis-ci/">
+                        <span class="tag">travis ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vsftpd/">
+                        <span class="tag">vsftpd</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/wechat/">
+                        <span class="tag">wechat</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/windows/">
+                        <span class="tag">windows</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端开发环境/">
+                        <span class="tag">前端开发环境</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/小程序/">
+                        <span class="tag">小程序</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+        
+        </div>
+    
+</div>
+
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen is-hidden-touch is-hidden-desktop-only has-order-3 column-right ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/wechat-mina-note.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/wechat/mina.png" alt="微信小程序开发填坑整理">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-21T13:52:00.000Z">2020-02-21</time></div>
+                    <a href="/wechat-mina-note.html" class="has-link-black-ter is-size-6">微信小程序开发填坑整理</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/traefik-devops.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/devops/traefik-devops.jpg" alt="利用Traefik搭建超简单的DevOps平台">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2020-02-16T14:38:00.000Z">2020-02-16</time></div>
+                    <a href="/traefik-devops.html" class="has-link-black-ter is-size-6">利用Traefik搭建超简单的DevOps平台</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/centos7-update-openssh.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/server/openssh.gif" alt="CentOS7升级OpenSSH">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-06-13T11:51:00.000Z">2019-06-13</time></div>
+                    <a href="/centos7-update-openssh.html" class="has-link-black-ter is-size-6">CentOS7升级OpenSSH</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/black-mac-os.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/others/mac-install.jpg" alt="黑苹果安装记录">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-05-14T23:10:00.000Z">2019-05-14</time></div>
+                    <a href="/black-mac-os.html" class="has-link-black-ter is-size-6">黑苹果安装记录</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/electron-app-summary.html" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/images/electron/logo.png" alt="Electron应用开发总结">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-02-26T10:30:00.000Z">2019-02-26</time></div>
+                    <a href="/electron-app-summary.html" class="has-link-black-ter is-size-6">Electron应用开发总结</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2020/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2020</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2019/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2018/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2018</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2017/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2017</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/06/">
+                <span class="level-start">
+                    <span class="level-item">六月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/05/">
+                <span class="level-start">
+                    <span class="level-item">五月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2016/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2016</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/12/">
+                <span class="level-start">
+                    <span class="level-item">十二月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/11/">
+                <span class="level-start">
+                    <span class="level-item">十一月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/07/">
+                <span class="level-start">
+                    <span class="level-item">七月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/04/">
+                <span class="level-start">
+                    <span class="level-item">四月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">3</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/03/">
+                <span class="level-start">
+                    <span class="level-item">三月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/02/">
+                <span class="level-start">
+                    <span class="level-item">二月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">1</span>
+                </span>
+            </a>
+        </li>
+        
+        <li>
+            <a class="level is-marginless" href="/archives/2015/01/">
+                <span class="level-start">
+                    <span class="level-item">一月 2015</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">4</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Api/">
+                        <span class="tag">Api</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Atom/">
+                        <span class="tag">Atom</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Atom-plugin/">
+                        <span class="tag">Atom-plugin</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CD/">
+                        <span class="tag">CD</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/CI/">
+                        <span class="tag">CI</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Cookie/">
+                        <span class="tag">Cookie</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Debug/">
+                        <span class="tag">Debug</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Firebase/">
+                        <span class="tag">Firebase</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Fonts/">
+                        <span class="tag">Fonts</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Frontend/">
+                        <span class="tag">Frontend</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Ghost/">
+                        <span class="tag">Ghost</span>
+                        <span class="tag is-grey">10</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Git/">
+                        <span class="tag">Git</span>
+                        <span class="tag is-grey">3</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Github/">
+                        <span class="tag">Github</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Hexo/">
+                        <span class="tag">Hexo</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Nginx/">
+                        <span class="tag">Nginx</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/NodeJs/">
+                        <span class="tag">NodeJs</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Raspberry/">
+                        <span class="tag">Raspberry</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/SSH/">
+                        <span class="tag">SSH</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Swiftype/">
+                        <span class="tag">Swiftype</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/TravisCI/">
+                        <span class="tag">TravisCI</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/Vps/">
+                        <span class="tag">Vps</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/centos/">
+                        <span class="tag">centos</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/ci/">
+                        <span class="tag">ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/devops/">
+                        <span class="tag">devops</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/dokku/">
+                        <span class="tag">dokku</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/drone/">
+                        <span class="tag">drone</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/electron/">
+                        <span class="tag">electron</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/electron-ssr/">
+                        <span class="tag">electron-ssr</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gitlab-ci/">
+                        <span class="tag">gitlab ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/gogs/">
+                        <span class="tag">gogs</span>
+                        <span class="tag is-grey">2</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/k8s/">
+                        <span class="tag">k8s</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/kubernetes/">
+                        <span class="tag">kubernetes</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/mac/">
+                        <span class="tag">mac</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/openssh/">
+                        <span class="tag">openssh</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/os/">
+                        <span class="tag">os</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/rancher/">
+                        <span class="tag">rancher</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/rancher-os/">
+                        <span class="tag">rancher os</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/registry/">
+                        <span class="tag">registry</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/summary/">
+                        <span class="tag">summary</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/traefik/">
+                        <span class="tag">traefik</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/travis-ci/">
+                        <span class="tag">travis ci</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/vsftpd/">
+                        <span class="tag">vsftpd</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/wechat/">
+                        <span class="tag">wechat</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/windows/">
+                        <span class="tag">windows</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/前端开发环境/">
+                        <span class="tag">前端开发环境</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/tags/小程序/">
+                        <span class="tag">小程序</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+    
+    
+</div>
+
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+    <div class="container">
+        <div class="level">
+            <div class="level-start has-text-centered-mobile">
+                <a class="footer-logo is-block has-mb-6" href="/">
+                
+                    <img src="/images/logo.svg" alt="利用Traefik搭建超简单的DevOps平台" height="28">
+                
+                </a>
+                <p class="is-size-7">
+                &copy; 2020 二锅头&nbsp;
+                Powered by <a href="http://hexo.io/" target="_blank">Hexo</a> & <a href="http://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a>
+                
+                </p>
+            </div>
+            <div class="level-end">
+            
+                <div class="field has-addons is-flex-center-mobile has-mt-5-mobile is-flex-wrap is-flex-middle">
+                
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Download on GitHub" href="http://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                </p>
+                
+                </div>
+            
+            </div>
+        </div>
+    </div>
+</footer>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script>
+<script>moment.locale("zh-CN");</script>
+
+
+    
+    
+    
+    <script src="/js/animation.js"></script>
+    
+
+    
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script>
+    <script src="/js/gallery.js" defer></script>
+    
+
+    
+    
+    
+    
+    
+    
+
+<a id="back-to-top" title="回到顶端" href="javascript:;">
+    <i class="fas fa-chevron-up"></i>
+</a>
+<script src="/js/back-to-top.js" defer></script>
+
+
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script>
+    <script src="/js/clipboard.js" defer></script>
+    
+
+    
+    
+    
+
+
+<script src="/js/main.js" defer></script>
+
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="想要查找什么...">
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: '文章',
+                PAGES: '页面',
+                CATEGORIES: '分类',
+                TAGS: '标签',
+                UNTITLED: '(无标题)',
+            },
+            CONTENT_URL: '/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/js/insight.js" defer></script>
+<link rel="stylesheet" href="/css/search.css">
+<link rel="stylesheet" href="/css/insight.css">
+    
+</body>
+</html>
