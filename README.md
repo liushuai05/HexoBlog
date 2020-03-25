@@ -1,7 +1,7 @@
 ![build-info](https://travis-ci.org/erguotou520/HexoBlog.svg)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/51b3b9d2-581b-429f-bd2e-4b9f3da7c4c0/deploy-status)](https://app.netlify.com/sites/elastic-shockley-940ec0/deploys)
-#### 安装:
-如果报以下错误
+#### 问题解决:
+###### 如果报以下错误
 ```shell
 INFO  Checking dependencies
 ERROR Package cheerio is not installed.
@@ -19,6 +19,10 @@ ERROR Please install the missing dependencies from the root directory of your He
 ```shell
 npm install hexo-pagination
 ```
+###### 解决github文章评论登录问题
+[Hexo gitment解决篇](https://blog.csdn.net/Biebersxzl/article/details/81913680)
+[使用github OAuth实现用户登录](https://blog.csdn.net/kobe24lmlps/article/details/80838329)
+根据以上博客具体介绍修改/themes/icarus/_config.yml配置文件 大概65行左右
 
 #### 命令:
 ```shell
