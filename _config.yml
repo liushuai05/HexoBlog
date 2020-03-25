@@ -3,16 +3,16 @@
 ## Source: https://github.com/hexojs/hexo/
 
 # Site
-title: 宁静方能致远
+title: 
 subtitle: To access inner peace
 description: 抛弃复杂的尘世，忘却周边的烦恼，回归书写和阅读，放空心灵，做一个简单的自己。
-author: 二锅头
+author: 楼咯小卒
 language: zh-CN
 timezone:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: https://blog.erguotou.me
+url: https://blog.cq.liushuai.cq.cn
 root: /
 permalink: :slug.html
 permalink_defaults:
@@ -94,5 +94,5 @@ theme: icarus
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: https://github.com/erguotou520/HexoBlog.git
+  repo: https://github.com/liushuai05/HexoBlog.git
   branch: gh-pages

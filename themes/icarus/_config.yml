@@ -114,6 +114,7 @@ sidebar:
         sticky: false
 # Sidebar widget settings
 # http://ppoffice.github.io/hexo-theme-icarus/categories/Widgets/
+#关注我小部件
 widgets:
     -
         # Widget name
@@ -121,9 +122,9 @@ widgets:
         # Where should the widget be placed, left or right
         position: left
         # Author name to be shown in the profile widget
-        author: 二锅头
+        author: 楼咯小卒
         # Title of the author to be shown in the profile widget
-        author_title: 不正经的前端
+        author_title: 爱折腾的小码农
         # Author's current location to be shown in the profile widget
         location: China
         # Path or URL to the avatar to be shown in the profile widget
@@ -131,12 +132,12 @@ widgets:
         # Email address for the Gravatar to be shown in the profile widget
         gravatar:
         # Path or URL for the follow button
-        follow_link: 'http://github.com/erguotou520'
+        follow_link: 'http://github.com/liushuai05' #关注我跳转链接
         # Links to be shown on the bottom of the profile widget
         social_links:
             Github:
                 icon: fab fa-github
-                url: 'http://github.com/erguotou520'
+                url: 'http://github.com/liushuai05'
             # Facebook:
             #     icon: fab fa-facebook
             #     url: 'http://facebook.com'
