@@ -65,10 +65,10 @@ search:
 comment:
     # Name of the comment plugin
     type: gitment
-    owner: erguotou520
-    repo: HexoBlog
-    client_id: 2796247645eb3e1a75a2 
-    client_secret: 0216a1a4c0ff0f5d8264f00582d697efe7ec2250
+    owner: liushuai05 #github账号
+    repo: HexoBlog  
+    client_id: 111af9a8719e686fb830
+    client_secret: 6d6386d490adb09382df2afd212d992bd4f2c834
 # Donation entries
 # http://ppoffice.github.io/hexo-theme-icarus/categories/Donation/
 # donate:
